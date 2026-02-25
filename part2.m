@@ -70,7 +70,7 @@ for k = 1:num_epochs
         batch = idx(j : min(j + batch_size - 1, n_train));
         
         % Compute g(b_tilde).
-        g = zeros(60);
+        g = zeros(60,1);
         for i = batch
             x_i = X_train(i, :);
             y_i = y_train(i);
