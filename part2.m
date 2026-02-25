@@ -19,9 +19,13 @@ y_test = y1(n_train+1:end);
 % Helper functions
 my_predict = @(X, x) 2*(X*x >= 0) - 1;   % maps >=0 to +1, else -1
 sensitivity = @(yhat, ytrue) sum((yhat == 1) & (ytrue == 1)) / sum(ytrue == 1);
-specificity = @(yhat, ytrue) sum((yhat == 0) & (ytrue == 0)) / sum(ytrue == 0);
+specificity = @(yhat, ytrue) sum((yhat == -1) & (ytrue == -1)) / sum(ytrue == -1);
 
-%% 1. Least squares - QR decomposition
+
+
+% ---- Least squares - QR decomposition ----
+
+
 
 [Q, R] = qr(X_train, 0);
 b_qr = R \ (Q' * y_train);
@@ -35,7 +39,11 @@ sens_test_qr = sensitivity(y_test_hat_qr, y_test);
 spec_train_qr = specificity(y_train_hat_qr, y_train);
 spec_test_qr = specificity(y_test_hat_qr, y_test);
 
-%% 2. Logistic regression
+
+
+% ---- Logistic regression ----
+
+
 
 batch_size = 32;
 step_size = 0.01;
@@ -62,17 +70,17 @@ for k = 1:num_epochs
         batch = idx(j : min(j + batch_size - 1, n_train));
         
         % Compute g(b_tilde).
-        g = 0;
+        g = zeros(60);
         for i = batch
             x_i = X_train(i, :);
             y_i = y_train(i);
             
-            l_i = y_i * log(1 / (1 + exp(-1 * x_i * b_tilde))) + (1 - y_i) * log(1 - 1 / (1 + exp(-1 * x_i * b_tilde)));
-            g = g - l_i;
+            l_i = y_i * x_i / (1 + exp(y_i * x_i * b_tilde));
+            g = g - transpose(l_i);
         end
     
         g = g / length(batch);
-        g_norm = abs(g);
+        g_norm = norm(g);
         
         % Update b.
         b_lr = b_tilde - step_size * g;
@@ -88,9 +96,13 @@ sens_test_lr = sensitivity(y_test_hat_lr, y_test);
 spec_train_lr = specificity(y_train_hat_lr, y_train);
 spec_test_lr = specificity(y_test_hat_lr, y_test);
 
-%% 3. SVM
 
-% ---- Train Linear SVM (baseline) ----
+
+% ---- SVM ----
+
+
+
+% Train Linear SVM (baseline).
 M_lin = fitcsvm(X_train, y_train, ...
     'KernelFunction','linear', ...
     'Standardize',true, ...
@@ -105,7 +117,7 @@ sens_test_m_lin = sensitivity(y_test_hat_m_lin, y_test);
 spec_train_m_lin = specificity(y_train_hat_m_lin, y_train);
 spec_test_m_lin = specificity(y_test_hat_m_lin, y_test);
 
-% ---- Train RBF (Gaussian) SVM ----
+% Train RBF (Gaussian) SVM.
 % gamma = 1/(2*sigma^2)
 % KernelScale = sigma
 
@@ -124,7 +136,7 @@ sens_test_m_rbf = sensitivity(y_test_hat_m_rbf, y_test);
 spec_train_m_rbf = specificity(y_train_hat_m_rbf, y_train);
 spec_test_m_rbf = specificity(y_test_hat_m_rbf, y_test);
 
-%% Performance evaluation
+% ---- Performance evaluation ----
 
 fprintf('\nMETHOD            Train Sens   Test Sens   Train Spec   Test Spec\n');
 fprintf('---------------------------------------------------------------\n');
